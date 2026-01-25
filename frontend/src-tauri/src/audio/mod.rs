@@ -2,6 +2,7 @@
 pub mod audio_processing;
 pub mod encode;
 pub mod ffmpeg;
+pub mod file_loader;  // NEW: Audio file loading for transcription
 pub mod vad;
 
 // Modularized device management
@@ -37,6 +38,9 @@ pub mod playback_monitor; // NEW: Playback device detection for BT warnings
 
 // Transcription module (provider abstraction, engine management, worker pool)
 pub mod transcription;
+
+// File transcription commands (for pre-recorded audio/video files)
+pub mod file_transcription_commands;
 
 pub use devices::{
     default_input_device, default_output_device, get_device_and_config, list_audio_devices,
@@ -99,4 +103,7 @@ pub use diagnostics::{
 pub use ffmpeg_mixer::{FFmpegAudioMixer, BufferStats, RNNOISE_APPLY_ENABLED};
 
 pub use vad::{extract_speech_16k};
+
+// Export file loader functionality
+pub use file_loader::{load_audio_file, validate_audio_file, load_audio_file_with_info, AudioFileInfo};
 
