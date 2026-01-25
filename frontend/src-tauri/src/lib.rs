@@ -710,6 +710,14 @@ pub fn run() {
             // System settings commands
             #[cfg(target_os = "macos")]
             utils::open_system_settings,
+            // File transcription commands (pre-recorded audio/video)
+            audio::file_transcription_commands::validate_file_for_transcription,
+            audio::file_transcription_commands::transcribe_file,
+            audio::file_transcription_commands::init_deepgram_provider,
+            audio::file_transcription_commands::set_deepgram_api_key,
+            audio::file_transcription_commands::is_deepgram_configured,
+            audio::file_transcription_commands::set_deepgram_options,
+            audio::file_transcription_commands::get_available_file_transcription_providers,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
