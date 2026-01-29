@@ -4,7 +4,7 @@
 // Sends audio to Deepgram's cloud API for fast, accurate transcription.
 
 use async_trait::async_trait;
-use log::{debug, info, warn};
+use log::{debug, info};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -321,6 +321,16 @@ impl TranscriptionProvider for DeepgramProvider {
 impl Default for DeepgramProvider {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Clone for DeepgramProvider {
+    fn clone(&self) -> Self {
+        Self {
+            api_key: self.api_key.clone(),
+            options: self.options.clone(),
+            client: reqwest::Client::new(),
+        }
     }
 }
 

@@ -7,7 +7,7 @@ use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::{command, AppHandle, Emitter, Manager, Runtime};
+use tauri::{command, AppHandle, Emitter, Runtime};
 
 use super::file_loader::{load_audio_file, validate_audio_file, AudioFileInfo};
 use super::transcription::{
@@ -176,7 +176,7 @@ async fn transcribe_with_whisper<R: Runtime>(
 async fn transcribe_with_parakeet<R: Runtime>(
     app: &AppHandle<R>,
     audio: Vec<f32>,
-    language: Option<String>,
+    _language: Option<String>, // Parakeet doesn't support language selection yet
 ) -> Result<(String, Option<f32>, Option<String>), String> {
     emit_progress(app, "transcribing", 50, "Transcribing with Parakeet...");
 
@@ -193,8 +193,9 @@ async fn transcribe_with_parakeet<R: Runtime>(
 
         emit_progress(app, "transcribing", 60, "Processing audio...");
 
+        // Note: Parakeet doesn't support language parameter
         let result = engine
-            .transcribe_audio(audio, language)
+            .transcribe_audio(audio)
             .await
             .map_err(|e| format!("Parakeet transcription failed: {}", e))?;
 
@@ -363,16 +364,5 @@ fn emit_progress<R: Runtime>(app: &AppHandle<R>, stage: &str, progress: u8, mess
 
     if let Err(e) = app.emit("file-transcription-progress", &update) {
         error!("Failed to emit progress event: {}", e);
-    }
-}
-
-// Implement Clone for DeepgramProvider to allow async operations
-impl Clone for DeepgramProvider {
-    fn clone(&self) -> Self {
-        Self {
-            api_key: self.api_key.clone(),
-            options: self.options.clone(),
-            client: reqwest::Client::new(),
-        }
     }
 }
