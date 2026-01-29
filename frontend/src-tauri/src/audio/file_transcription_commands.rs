@@ -3,17 +3,17 @@
 // Tauri commands for transcribing pre-recorded audio/video files.
 // Supports local transcription (Whisper/Parakeet) and cloud (Deepgram) providers.
 
-use log::{error, info};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{command, AppHandle, Emitter, Runtime};
 
 use super::file_loader::{load_audio_file, validate_audio_file, AudioFileInfo};
-use super::transcription::{
-    DeepgramOptions, DeepgramProvider, TranscriptionError, TranscriptionProvider,
-};
+use super::transcription::{DeepgramOptions, DeepgramProvider, TranscriptionProvider};
+use crate::database::repositories::setting::SettingsRepository;
 use crate::parakeet_engine::commands::PARAKEET_ENGINE;
+use crate::state::AppState;
 use crate::whisper_engine::commands::WHISPER_ENGINE;
 
 // Global Deepgram provider instance
@@ -246,20 +246,48 @@ async fn transcribe_with_deepgram<R: Runtime>(
     }
 }
 
-/// Initialize the Deepgram provider
+/// Initialize the Deepgram provider and load saved API key from database
 #[command]
-pub async fn init_deepgram_provider() -> Result<(), String> {
+pub async fn init_deepgram_provider<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
     let mut guard = DEEPGRAM_PROVIDER.lock().unwrap();
     if guard.is_none() {
         *guard = Some(DeepgramProvider::new());
         info!("Deepgram provider initialized");
     }
+
+    // Load saved API key from database
+    if let Some(provider) = guard.as_ref() {
+        let provider = provider.clone();
+        drop(guard);
+
+        let pool = state.db_manager.pool();
+        match SettingsRepository::get_transcript_api_key(pool, "deepgram").await {
+            Ok(Some(api_key)) if !api_key.is_empty() => {
+                provider.set_api_key(api_key).await;
+                info!("Deepgram API key loaded from database");
+            }
+            Ok(_) => {
+                info!("No saved Deepgram API key found");
+            }
+            Err(e) => {
+                warn!("Failed to load Deepgram API key from database: {}", e);
+            }
+        }
+    }
+
     Ok(())
 }
 
-/// Configure Deepgram API key
+/// Configure Deepgram API key (saves to memory and database)
 #[command]
-pub async fn set_deepgram_api_key(api_key: String) -> Result<(), String> {
+pub async fn set_deepgram_api_key<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    api_key: String,
+) -> Result<(), String> {
     let mut guard = DEEPGRAM_PROVIDER.lock().unwrap();
     if guard.is_none() {
         *guard = Some(DeepgramProvider::new());
@@ -269,8 +297,20 @@ pub async fn set_deepgram_api_key(api_key: String) -> Result<(), String> {
         // Clone the provider to avoid holding the lock during async operation
         let provider = provider.clone();
         drop(guard);
-        provider.set_api_key(api_key).await;
-        info!("Deepgram API key configured");
+
+        // Set API key in memory
+        provider.set_api_key(api_key.clone()).await;
+        info!("Deepgram API key configured in memory");
+
+        // Save to database for persistence
+        let pool = state.db_manager.pool();
+        if let Err(e) = SettingsRepository::save_transcript_api_key(pool, "deepgram", &api_key).await
+        {
+            error!("Failed to save Deepgram API key to database: {}", e);
+            return Err(format!("Failed to save API key: {}", e));
+        }
+        info!("Deepgram API key saved to database");
+
         Ok(())
     } else {
         Err("Failed to get Deepgram provider".to_string())
