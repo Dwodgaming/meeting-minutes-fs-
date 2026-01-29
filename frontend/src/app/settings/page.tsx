@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { ArrowLeft, Settings2, Mic, Database as DatabaseIcon, SparkleIcon } from 'lucide-react';
+import { ArrowLeft, Settings2, Mic, Database as DatabaseIcon, SparkleIcon, FileAudio } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { invoke } from '@tauri-apps/api/core';
 import { motion } from 'framer-motion';
@@ -9,6 +9,8 @@ import { TranscriptSettings, TranscriptModelProps } from '@/components/Transcrip
 import { RecordingSettings } from '@/components/RecordingSettings';
 import { PreferenceSettings } from '@/components/PreferenceSettings';
 import { SummaryModelSettings } from '@/components/SummaryModelSettings';
+import FileTranscription from '@/components/FileTranscription';
+import DeepgramSettings from '@/components/DeepgramSettings';
 import { useConfig } from '@/contexts/ConfigContext';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
@@ -17,6 +19,7 @@ const TABS = [
   { value: 'general', label: 'General', icon: Settings2 },
   { value: 'recording', label: 'Recordings', icon: Mic },
   { value: 'Transcriptionmodels', label: 'Transcription', icon: DatabaseIcon },
+  { value: 'fileTranscription', label: 'File Import', icon: FileAudio },
   { value: 'summaryModels', label: 'Summary', icon: SparkleIcon }
 ] as const;
 
@@ -118,6 +121,20 @@ export default function SettingsPage() {
                 transcriptModelConfig={transcriptModelConfig}
                 setTranscriptModelConfig={setTranscriptModelConfig}
               />
+            </TabsContent>
+            <TabsContent value="fileTranscription">
+              <div className="space-y-6 py-4">
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">File Transcription</h2>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Transcribe pre-recorded audio and video files using local models or Deepgram API.
+                  </p>
+                </div>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <FileTranscription />
+                  <DeepgramSettings />
+                </div>
+              </div>
             </TabsContent>
             <TabsContent value="summaryModels">
               <SummaryModelSettings />
